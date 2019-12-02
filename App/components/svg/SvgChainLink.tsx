@@ -4,19 +4,25 @@ import { Path } from 'react-native-svg';
 interface SvgChainLinkProps {
   radius?: number;
   roll?: number;
+  rotation?: number;
   x?: number;
   y?: number;
 }
+
 
 export default function SvgChainLink(
   {
     radius = 25,
     roll = 0,
+    rotation = 0,
     x = 0,
     y = 0
   }: SvgChainLinkProps
 ) {
-  let dy = Math.cos(roll) * radius;
+  let rotatedDy = Math.cos(roll) * radius;
+  let rotatedDx = Math.sin(roll) * radius;
+
+  
 
   if (Math.abs(dy) < 0.0001) {
     return <Path
