@@ -1,5 +1,6 @@
 import React from 'react';
 import { Path } from 'react-native-svg';
+import Vector from '../../models/Vector';
 
 interface SvgChainLinkProps {
   radius?: number;
@@ -9,6 +10,9 @@ interface SvgChainLinkProps {
   y?: number;
 }
 
+function radiansToDegrees(radians: number): number {
+  return (radians / (2 * Math.PI)) * 360
+}
 
 export default function SvgChainLink(
   {
@@ -19,16 +23,20 @@ export default function SvgChainLink(
     y = 0
   }: SvgChainLinkProps
 ) {
-  let rotatedDy = Math.cos(roll) * radius;
-  let rotatedDx = Math.sin(roll) * radius;
+  let rolledY = radius * Math.cos(roll)
 
-  
+  let normalizedOriginOffset = new Vector(radius / 2, radius * 1.5)
+  let originOffset = normalizedOriginOffset.rotateBy(rotation)
+  let origin = new Vector(x, y) //.add(originOffset)
 
-  if (Math.abs(dy) < 0.0001) {
+  if (Math.abs(rolledY) < 0.001) {
+    let normalizedVector = new Vector(radius * 4, 0)
+    let vector = normalizedVector.rotateBy(rotation);
+
     return <Path
       d={`
-        M ${x + radius / 2} ${y + radius * 1.5}
-        h ${radius * 4}
+        M ${origin.toSvgPath()}
+        l ${vector.toSvgPath()}
       `}
       stroke="black"
       strokeWidth={radius}
@@ -36,14 +44,30 @@ export default function SvgChainLink(
     />
   }
 
+  let normalizedStraightSegmentVector = new Vector(radius * 2, 0)
+  let normalizedCurvedSegmentVectors = [
+    new Vector(radius, -rolledY),
+    new Vector(radius, rolledY),
+    new Vector(-radius, rolledY),
+    new Vector(-radius, -rolledY)
+  ]
+
+  let arcRadii = new Vector(radius, rolledY)
+  let radiiRotation = radiansToDegrees(rotation)
+  let straightSegmentVector = normalizedStraightSegmentVector.rotateBy(rotation)
+  let curvedSegmentVectors = normalizedCurvedSegmentVectors.map((vector) => vector.rotateBy(rotation))
+
+  let sweepFlag = rolledY > 0 ? "1" : "0"
+
   return <Path
       d={`
-        M ${x + radius / 2} ${y + radius * 1.5}
-        a ${radius} ${dy} 0 0 ${dy > 0 ? 1 : 0} ${radius} ${-dy}
-        h ${radius * 2}
-        a ${radius} ${dy} 0 0 ${dy > 0 ? 1 : 0} 0 ${2 * dy}
-        h ${-radius * 2}
-        a ${radius} ${dy} 0 0 ${dy > 0 ? 1 : 0} ${-radius} ${-dy}
+        M ${origin.toSvgPath()}
+        a ${arcRadii.toSvgPath()} ${radiiRotation} 0 ${sweepFlag} ${curvedSegmentVectors[0].toSvgPath()}
+        l ${straightSegmentVector.toSvgPath()}
+        a ${arcRadii.toSvgPath()} ${radiiRotation} 0 ${sweepFlag} ${curvedSegmentVectors[1].toSvgPath()}
+        a ${arcRadii.toSvgPath()} ${radiiRotation} 0 ${sweepFlag} ${curvedSegmentVectors[2].toSvgPath()}
+        l ${straightSegmentVector.rotateBy(1 * Math.PI).toSvgPath()}
+        a ${arcRadii.toSvgPath()} ${radiiRotation} 0 ${sweepFlag} ${curvedSegmentVectors[3].toSvgPath()}
         z
       `}
       stroke="black"
